@@ -8,6 +8,23 @@ Für jede Anfrage sendet `ft_ping` eine ICMP-Echo-Request-Nachricht (Typ 8) übe
 
 Die Referenz für das Ausgabeformat ist die Implementierung aus `inetutils-2.0`, die mit `ping -V` überprüft werden kann. Die RTT-Werte dürfen naturgemäß abweichen. Eine Reverse-DNS-Auflösung der Antwortadresse wird entsprechend den Projektanforderungen nicht durchgeführt.
 
+### Goals
+
+- Understand the Internet protocol suite: IP, ICMP, sockets, DNS (forward resolution).
+- Build and parse packets by hand: ICMP header, Internet checksum, IP header of replies.
+- Handle network errors without ever crashing (segfault, bus error, double free).
+
+## Features
+
+### Mandatory
+
+- IPv4 address or hostname/FQDN as argument (resolved with `getaddrinfo`).
+- No reverse DNS on replies: only the IP address is printed.
+- `-v` verbose mode: ICMP error messages (e.g. *Time to live exceeded*) are displayed instead of being ignored, and the program keeps running.
+- `-?` help message.
+- Per-packet output (`icmp_seq`, `ttl`, `time`).
+- Final statistics on `SIGINT`: packets transmitted/received, loss percentage, `min/avg/max/stddev`.
+
 ### Lernziele
 
 - Die Internetprotokollfamilie, IP, ICMP und Raw Sockets verstehen.
@@ -50,74 +67,72 @@ sudo ./ft_ping -?
 
 Raw Sockets benötigen unter Linux normalerweise Root-Rechte oder die Capability `CAP_NET_RAW`.
 
-# ft_ping
- 
-## Description
- 
-`ft_ping` is a recode of the `ping` command in C. It tests whether another machine is reachable over an IP network and measures the **round-trip time (RTT)** of each probe.
- 
-The program sends **ICMP Echo Request** messages (type 8) through a raw socket, waits for **ICMP Echo Reply** messages (type 0), and prints one line per reply. When interrupted with `Ctrl+C`, it prints a summary with packet loss and RTT statistics.
- 
-The reference implementation is `ping` from **inetutils-2.0** (`ping -V`). The output format matches it, except for the RTT values and the reverse DNS resolution, which is deliberately not performed.
- 
-The theory behind the project (protocol layers, IP and ICMP headers, ARP, DNS, TCP/UDP) is explained in [Networking background](#networking-background).
- 
-### Goals
- 
-- Understand the Internet protocol suite: IP, ICMP, sockets, DNS (forward resolution).
-- Build and parse packets by hand: ICMP header, Internet checksum, IP header of replies.
-- Handle network errors without ever crashing (segfault, bus error, double free).
-## Features
- 
-### Mandatory
- 
-- IPv4 address or hostname/FQDN as argument (resolved with `getaddrinfo`).
-- No reverse DNS on replies: only the IP address is printed.
-- `-v` verbose mode: ICMP error messages (e.g. *Time to live exceeded*) are displayed instead of being ignored, and the program keeps running.
-- `-?` help message.
-- Per-packet output (`icmp_seq`, `ttl`, `time`).
-- Final statistics on `SIGINT`: packets transmitted/received, loss percentage, `min/avg/max/stddev`.
+### Voraussetzungen und Build
+
+Benötigt werden Linux, `gcc` oder `cc` sowie `make`. Alternativ zu Root-Rechten
+kann das Programm mit der Capability `CAP_NET_RAW` ausgeführt werden.
+
+```sh
+make        # ft_ping erstellen
+make clean  # Objektdateien entfernen
+make fclean # Objektdateien und Programm entfernen
+make re     # vollständig neu erstellen
+```
+
+### Tests
+
+Für einen Vergleich kann `inetutils-ping` installiert werden:
+
+```sh
+sudo apt install inetutils-ping
+ping -V
+```
+
+Zusätzlich lassen sich ICMP-Pakete mit `tcpdump -i any -n icmp` oder Wireshark
+überprüfen. Typische Tests sind IPv4-Adressen, Hostnamen, unbekannte Hosts,
+ungültige Optionen, `-v` sowie das Beenden mit `Ctrl+C`.
 
 ## Instructions
- 
+
 ### Requirements
- 
+
 - Linux (Debian VM, kernel > 3.14)
 - `gcc` and `make`
 - Root privileges (or `CAP_NET_RAW`), because the program opens a raw socket
+
 ### Build
- 
+
 ```bash
 make        # build ft_ping
 make clean  # remove object files
 make fclean # remove object files and the binary
 make re     # rebuild everything
 ```
- 
+
 ### Usage
- 
+
 ```bash
 sudo ./ft_ping [-v] [-?] <host>
 ```
- 
+
 | Option | Description |
 |---|---|
 | `-v` | Verbose output, also shows ICMP errors |
 | `-?` | Show help and exit |
 | `<host>` | IPv4 address, hostname or FQDN |
- 
+
 ### Examples
- 
+
 ```bash
 sudo ./ft_ping 8.8.8.8
 sudo ./ft_ping google.com
 sudo ./ft_ping -v 8.8.8.8
 sudo ./ft_ping -?
 ```
- 
+
 Example output (RTT values will differ):
- 
-```
+
+```text
 PING 8.8.8.8 (8.8.8.8): 56 data bytes
 64 bytes from 8.8.8.8: icmp_seq=0 ttl=117 time=12.345 ms
 64 bytes from 8.8.8.8: icmp_seq=1 ttl=117 time=11.987 ms
@@ -125,56 +140,49 @@ PING 8.8.8.8 (8.8.8.8): 56 data bytes
 2 packets transmitted, 2 packets received, 0% packet loss
 round-trip min/avg/max/stddev = 11.987/12.166/12.345/0.179 ms
 ```
- 
+
 ## How it works
- 
+
 1. **Argument parsing**: options (`-v`, `-?`) and the host operand.
 2. **Resolution**: `getaddrinfo()` with `AF_INET` turns the hostname into an IPv4 address. The original string is kept for the header and statistics.
-3. **Socket**: `socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)`, then `setsockopt()` for the TTL (`IP_TTL`) and the receive timeout (`SO_RCVTIMEO`).
-4. **Packet**: an ICMP header (type 8, code 0, identifier = PID, sequence number starting at 0) followed by 56 bytes of data containing the send timestamp. The checksum is the one's complement sum of all 16-bit words of the ICMP message (RFC 1071).
-5. **Send / receive loop**: one probe per second with `sendto()`, replies read with `recvmsg()`. The IP header of each reply is skipped using `IHL * 4`, the TTL is read from it, and replies that do not match the process identifier are ignored.
-6. **RTT**: computed from the timestamp echoed back in the data, using a monotonic clock.
-7. **ICMP errors**: types such as *Destination Unreachable* (3) and *Time Exceeded* (11) embed the original IP header and the first bytes of the original ICMP packet. They are matched by identifier, reported, and never stop the program.
-8. **Statistics**: a `SIGINT` handler only sets a flag; the main loop prints loss percentage and `min/avg/max/stddev`.
+3. **Socket**: `socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)`.
+4. **Packet**: an ICMP header (type 8, code 0, identifier = PID, sequence number starting at 0) followed by 56 bytes of data. The checksum is the one's complement sum of all 16-bit words of the ICMP message (RFC 1071).
+5. **Send / receive loop**: one probe per second with `sendto()`, replies read with `select()` and `recvfrom()`. The IP header of each reply is skipped using `IHL * 4`, the TTL is read from it, and replies that do not match the process identifier are ignored.
+6. **RTT**: computed with a monotonic clock.
+7. **ICMP errors**: types such as *Destination Unreachable* (3) and *Time Exceeded* (11) are reported without stopping the program.
+8. **Statistics**: a `SIGINT` handler only sets a flag; the main loop prints the packet summary.
+
 ## Project structure
- 
-<!-- Adjust to your real layout. -->
- 
-```
+
+```text
 .
 ├── Makefile
 ├── README.md
 ├── includes/
 │   └── ft_ping.h
 └── src/
-    ├── main.c      # entry point, signal setup
+    ├── main.c      # entry point
     ├── parse.c     # arguments and help message
     ├── resolve.c   # hostname resolution
     ├── packet.c    # ICMP packet building and checksum
     ├── loop.c      # send / receive loop and timing
-    ├── reply.c     # reply and ICMP error parsing
-    └── stats.c     # min / avg / max / stddev
+    ├── reply.c     # reply parsing
+    └── stats.c     # packet statistics
 ```
- 
+
 ## Testing
- 
-The result is compared against the reference implementation:
- 
+
+The result can be compared with the reference implementation:
+
 ```bash
 sudo apt install inetutils-ping
-ping -V                       # must report inetutils 2.0
+ping -V
 ```
- 
-Cases checked side by side with `ping` and `ft_ping`:
- 
-- IPv4 address and hostname/FQDN
-- Unknown host, missing operand, invalid option
-- `-v` with a low TTL to force *Time to live exceeded*
-- `-?`
-- `Ctrl+C` after several packets (statistics format)
-- Memory: `valgrind --leak-check=full ./ft_ping 127.0.0.1`
-Packets can be inspected with `tcpdump -i any -n icmp` or Wireshark.
 
+Useful test cases include IPv4 addresses, hostnames/FQDNs, unknown hosts,
+missing operands, invalid options, `-v`, and stopping with `Ctrl+C`.
+
+# Deutsche technische Ergänzung
 
 ### Technischer Ablauf
 
@@ -209,27 +217,22 @@ ICMP-Fehlernachrichten enthalten den ursprünglichen IP-Header und die ersten By
 
 ### Bonusoptionen
 
-Die Aufgabenstellung nennt unter anderem folgende mögliche Erweiterungen:
+Die folgenden Erweiterungen sind derzeit nicht implementiert:
 
-`-f` Flood, `-l` Preload, `-n` numerische Ausgabe, `-w` Deadline, `-W` Timeout, `-p` Paketmuster, `-r` Routing umgehen, `-s` Paketgröße, `-T` beziehungsweise `--ttl` und `--ip-timestamp`.
-### Bonus
- 
-<!-- Keep only what you really implemented. -->
- 
-- [ ] `-f` flood
-- [ ] `-l` preload
-- [ ] `-n` numeric output
-- [ ] `-w` deadline
-- [ ] `-W` timeout
-- [ ] `-p` pattern
-- [ ] `-r` bypass routing
-- [ ] `-s` packet size
+- [ ] `-f` Flood-Modus
+- [ ] `-l` Preload
+- [ ] `-n` Numerische Ausgabe
+- [ ] `-w` Deadline
+- [ ] `-W` Timeout
+- [ ] `-p` Paketmuster
+- [ ] `-r` Routing umgehen
+- [ ] `-s` Paketgröße
 - [ ] `-T` / `--ttl`
 - [ ] `--ip-timestamp`
 
 Die Bonusfunktionen werden nur bewertet, wenn der Pflichtumfang vollständig und fehlerfrei funktioniert.
 
-# Networking background
+# Netzwerkgrundlagen
 
 <img width="1266" height="598" alt="image" src="https://github.com/user-attachments/assets/04f5d4cd-8094-448c-aa91-4e5284afd32d" />
 
