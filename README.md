@@ -144,15 +144,6 @@ Nach dem Handshake nummeriert TCP jedes gesendete Byte. Der Empfänger bestätig
 | [RARP](https://de.wikipedia.org/wiki/Reverse_Address_Resolution_Protocol "Reverse Address Resolution Protocol") | (Reverse Address Resolution Protocol) – Adressumsetzung zwischen Geräte- (MAC) und IP-Adressen (veraltet – wird ersetzt durch [BOOTP](https://de.wikipedia.org/wiki/Bootstrap_Protocol "Bootstrap Protocol")) |
 | [IPoAC](https://de.wikipedia.org/wiki/Internet_Protocol_over_Avian_Carriers "Internet Protocol over Avian Carriers") | (Internet Protocol over Avian Carriers) – Internet-Protokoll mittels fliegender Träger – RFC 1149[\[3\]](https://de.wikipedia.org/wiki/Internetprotokollfamilie#cite_note-3) |
 
-## Literatur
-
-- [William Richard Stevens](https://de.wikipedia.org/wiki/Richard_Stevens "Richard Stevens"): *TCP/IP.* [ISBN 3-8266-5042-5](https://de.wikipedia.org/wiki/Special:BookSources/3826650425) (Standardwerk).
-- [Andrew S. Tanenbaum](https://de.wikipedia.org/wiki/Andrew_S._Tanenbaum "Andrew S. Tanenbaum"): *Computernetzwerke.* 5., aktualisierte Auflage, Pearson Studium, München 2012, [ISBN 978-3-86894-137-1](https://de.wikipedia.org/wiki/Special:BookSources/9783868941371) (Standardwerk).
-- [James F. Kurose](https://de.wikipedia.org/wiki/James_F._Kurose "James F. Kurose"), Keith W. Ross: *Computernetzwerke.* [ISBN 978-3-8273-7330-4](https://de.wikipedia.org/wiki/Special:BookSources/9783827373304) (Standardwerk).
-- Manfred Weiss: *TCP/IP Handbuch.* [ISBN 3-7723-5026-7](https://de.wikipedia.org/wiki/Special:BookSources/3772350267)
-- Uyless Black: *TCP/IP & Related Protocols.* [ISBN 0-07-005560-2](https://de.wikipedia.org/wiki/Special:BookSources/0070055602).
-- Craig Hunt: *TCP/IP.* [ISBN 3-89721-110-6](https://de.wikipedia.org/wiki/Special:BookSources/3897211106).
-
 ### Die Verbindungsschicht im Detail
 
 IP lässt sich nicht verstehen, ohne die darunterliegende Schicht zu kennen. In einem lokalen Netzwerk kommunizieren Maschinen über MAC-Adressen. Eine MAC-Adresse ist eine 48-Bit-Hardwareadresse wie `a4:5e:60:c1:22:9f` und normalerweise pro Netzwerkkarte eindeutig. Die Broadcast-Adresse `ff:ff:ff:ff:ff:ff` bedeutet „alle Geräte in diesem Link“. Die Daten werden in Ethernet-Frames übertragen.
