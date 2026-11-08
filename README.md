@@ -46,6 +46,7 @@ Nach dem Handshake nummeriert TCP jedes gesendete Byte. Der Empfänger bestätig
 # Netzwerkprotokolle – TCP/IP-Protokollstapel
 
 > Eine strukturierte Übersicht wichtiger Netzwerkprotokolle und ihrer Zuordnung zum TCP/IP- und OSI-Modell.
+> https://de.wikipedia.org/wiki/OSI-Modell
 
 ## Inhaltsverzeichnis
 
