@@ -1,5 +1,97 @@
 # Internetprotokollfamilie
 
+### Beschreibung
+
+`ft_ping` ist eine eigene Implementierung des bekannten Unix-Befehls `ping` in C. Das Programm prüft, ob ein anderer Rechner über ein IPv4-Netzwerk erreichbar ist, und misst die Zeit für den Hin- und Rückweg eines Pakets. Diese Zeit wird als **Round-Trip Time (RTT)** bezeichnet.
+
+Für jede Anfrage sendet `ft_ping` eine ICMP-Echo-Request-Nachricht (Typ 8) über einen Raw Socket. Der Zielhost antwortet mit einer ICMP-Echo-Reply-Nachricht (Typ 0). Für jede Antwort gibt das Programm unter anderem die Sequenznummer, die TTL und die gemessene RTT aus. Bei `Ctrl+C` werden abschließende Statistiken wie Paketverlust sowie minimale, durchschnittliche und maximale RTT ausgegeben.
+
+Die Referenz für das Ausgabeformat ist die Implementierung aus `inetutils-2.0`, die mit `ping -V` überprüft werden kann. Die RTT-Werte dürfen naturgemäß abweichen. Eine Reverse-DNS-Auflösung der Antwortadresse wird entsprechend den Projektanforderungen nicht durchgeführt.
+
+### Lernziele
+
+- Die Internetprotokollfamilie, IP, ICMP und Raw Sockets verstehen.
+- ICMP-Pakete selbst aufbauen und analysieren.
+- Die Internet-Checksumme berechnen und prüfen.
+- IPv4-Header von empfangenen Paketen auswerten.
+- Hostnamen mit `getaddrinfo()` in IPv4-Adressen auflösen.
+- Netzwerkfehler behandeln, ohne durch Segmentation Fault, Bus Error oder Double Free unerwartet zu beenden.
+
+### Pflichtumfang
+
+Das Programm muss folgende Anforderungen erfüllen:
+
+- Das ausführbare Programm heißt `ft_ping`.
+- Als Ziel wird eine IPv4-Adresse, ein Hostname oder ein FQDN akzeptiert.
+- Die Namensauflösung erfolgt über `getaddrinfo()`.
+- Die Optionen `-v` und `-?` werden unterstützt.
+- `-v` zeigt auch relevante ICMP-Fehlermeldungen an, zum Beispiel `Time Exceeded`, und beendet das Programm deswegen nicht.
+- Die Ausgabe enthält pro Antwort `icmp_seq`, `ttl` und `time`.
+- Bei `SIGINT` werden übertragene und empfangene Pakete, der Paketverlust sowie RTT-Statistiken ausgegeben.
+- Die Ausgabe orientiert sich an `inetutils-2.0`; eine Reverse-DNS-Auflösung wird nicht ergänzt.
+- Der Systembefehl `ping` und dessen Quellcode dürfen nicht verwendet oder aufgerufen werden.
+
+### Verwendung
+
+Nach dem Erstellen des Programms wird es beispielsweise so gestartet:
+
+```sh
+sudo ./ft_ping [-v] [-?] <ziel>
+```
+
+Beispiele:
+
+```sh
+sudo ./ft_ping 8.8.8.8
+sudo ./ft_ping example.com
+sudo ./ft_ping -v 8.8.8.8
+sudo ./ft_ping -?
+```
+
+Raw Sockets benötigen unter Linux normalerweise Root-Rechte oder die Capability `CAP_NET_RAW`.
+
+
+
+### Technischer Ablauf
+
+1. Die Argumente und Optionen werden geprüft.
+2. `getaddrinfo()` löst den Hostnamen mit `AF_INET` in eine IPv4-Adresse auf.
+3. Das Programm öffnet mit `socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)` einen Raw Socket.
+4. Eine ICMP-Nachricht mit Typ 8, Code 0, Prozess-ID als Identifier und einer fortlaufenden Sequenznummer wird aufgebaut.
+5. Die Checksumme wird über alle 16-Bit-Wörter der ICMP-Nachricht berechnet.
+6. Die Anfrage wird regelmäßig mit `sendto()` gesendet und die Antwort mit `recvmsg()` empfangen.
+7. Der IP-Header der Antwort wird anhand der IHL-Länge übersprungen; daraus wird unter anderem die TTL gelesen.
+8. Antworten mit einer fremden Identifier werden ignoriert, damit nur die eigenen Anfragen ausgewertet werden.
+9. Die RTT wird aus dem Zeitstempel in den Nutzdaten und einer monotonen Uhr berechnet.
+10. ICMP-Fehler wie `Destination Unreachable` (Typ 3) und `Time Exceeded` (Typ 11) werden erkannt und ausgegeben.
+11. Beim Beenden werden Paketverlust und `min/avg/max/stddev` berechnet.
+
+### Aufbau eines `ft_ping`-Pakets
+
+Eine typische Echo-Anfrage besteht aus:
+
+| Bestandteil | Größe | Inhalt |
+| --- | ---: | --- |
+| ICMP-Header | 8 Bytes | Typ, Code, Checksumme, Identifier und Sequenznummer |
+| ICMP-Nutzdaten | 56 Bytes | Zeitstempel und Auffüllbytes |
+| ICMP-Nachricht insgesamt | 64 Bytes | Wird als `64 bytes from ...` ausgegeben |
+| IPv4-Header | mindestens 20 Bytes | Wird vom Kernel ergänzt |
+
+Bei einem Raw Socket erstellt das Programm den ICMP-Teil. Der Kernel ergänzt den IP-Header. Auf dem lokalen Netzwerk wird das IP-Paket anschließend in einen Link-Layer-Frame, zum Beispiel einen Ethernet-Frame, eingebettet.
+
+### Fehlerbehandlung mit `-v`
+
+ICMP-Fehlernachrichten enthalten den ursprünglichen IP-Header und die ersten Bytes des ursprünglichen ICMP-Pakets. Dadurch kann `ft_ping` die Fehlermeldung der eigenen Anfrage zuordnen. Eine niedrige TTL kann verwendet werden, um für Testzwecke eine `Time Exceeded`-Meldung zu erzeugen. Solche Meldungen dürfen die laufende Messung nicht unerwartet beenden.
+
+### Bonusoptionen
+
+Die Aufgabenstellung nennt unter anderem folgende mögliche Erweiterungen:
+
+`-f` Flood, `-l` Preload, `-n` numerische Ausgabe, `-w` Deadline, `-W` Timeout, `-p` Paketmuster, `-r` Routing umgehen, `-s` Paketgröße, `-T` beziehungsweise `--ttl` und `--ip-timestamp`.
+
+Die Bonusfunktionen werden nur bewertet, wenn der Pflichtumfang vollständig und fehlerfrei funktioniert.
+
+
 <img width="1266" height="598" alt="image" src="https://github.com/user-attachments/assets/04f5d4cd-8094-448c-aa91-4e5284afd32d" />
 
 ### Schicht 1: Verbindungsschicht (der lokale Link)
