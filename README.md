@@ -1,4 +1,4 @@
-# Internet_protocol_suite
+# Internetprotokollfamilie
 
 <img width="1266" height="598" alt="image" src="https://github.com/user-attachments/assets/04f5d4cd-8094-448c-aa91-4e5284afd32d" />
 
