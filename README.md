@@ -2,9 +2,6 @@
 
 ### Beschreibung
 
-quelle:
-https://www.geeksforgeeks.org/linux-unix/ping-command-in-linux-with-examples/
-
 `ft_ping` ist eine eigene Implementierung des bekannten Unix-Befehls `ping` in C. Das Programm prüft, ob ein anderer Rechner über ein IPv4-Netzwerk erreichbar ist, und misst die Zeit für den Hin- und Rückweg eines Pakets. Diese Zeit wird als **Round-Trip Time (RTT)** bezeichnet.
 
 Für jede Anfrage sendet `ft_ping` eine ICMP-Echo-Request-Nachricht (Typ 8) über einen Raw Socket. Der Zielhost antwortet mit einer ICMP-Echo-Reply-Nachricht (Typ 0). Für jede Antwort gibt das Programm unter anderem die Sequenznummer, die TTL und die gemessene RTT aus. Bei `Ctrl+C` werden abschließende Statistiken wie Paketverlust sowie minimale, durchschnittliche und maximale RTT ausgegeben.
@@ -578,3 +575,7 @@ Der vollständige Weg des Projekts lautet daher: Hostname → DNS (Anwendungssch
 ---
 
 *Zusammengestellt als Lernübersicht für Netzwerktechnik und Systemintegration.*
+
+
+quelle:
+https://www.geeksforgeeks.org/linux-unix/ping-command-in-linux-with-examples/
