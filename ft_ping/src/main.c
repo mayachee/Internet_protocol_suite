@@ -1,8 +1,5 @@
 #include "ft_ping.h"
 
-#include <stdio.h>
-#include <string.h>
-
 int main(int argc, char **argv)
 {
 	struct s_ping_options options;

@@ -1,8 +1,5 @@
 #include "ft_ping.h"
 
-#include <netinet/ip_icmp.h>
-#include <string.h>
-
 uint16_t icmp_checksum(const void *data, size_t length)
 {
 	const uint8_t *bytes;
@@ -24,11 +21,13 @@ uint16_t icmp_checksum(const void *data, size_t length)
 }
 
 int build_echo_request(uint8_t *packet, size_t packet_size, uint16_t identifier,
-	uint16_t sequence)
+	uint16_t sequence, const struct s_ping_options *options)
 {
 	struct icmphdr *header;
+	size_t payload_size;
 
-	if (packet_size < sizeof(*header) + FT_PING_DATA_SIZE)
+	payload_size = options->packet_size;
+	if (packet_size < sizeof(*header) + payload_size)
 		return -1;
 	memset(packet, 0, packet_size);
 	header = (struct icmphdr *)packet;
@@ -36,6 +35,12 @@ int build_echo_request(uint8_t *packet, size_t packet_size, uint16_t identifier,
 	header->code = 0;
 	header->un.echo.id = identifier;
 	header->un.echo.sequence = sequence;
-	header->checksum = icmp_checksum(packet, sizeof(*header) + FT_PING_DATA_SIZE);
+	if (options->pattern_size > 0)
+	{
+		for (size_t index = 0; index < payload_size; index++)
+			packet[sizeof(*header) + index]
+				= options->pattern[index % options->pattern_size];
+	}
+	header->checksum = icmp_checksum(packet, sizeof(*header) + payload_size);
 	return 0;
 }

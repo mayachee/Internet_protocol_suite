@@ -15,7 +15,7 @@ OBJ := $(SRC:.c=.o)
 all: $(NAME)
 
 $(NAME): $(OBJ)
-	$(CC) $(CFLAGS) $(OBJ) -o $@
+	$(CC) $(CFLAGS) $(OBJ) -lm -o $@
 
 %.o: %.c includes/ft_ping.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@

@@ -178,9 +178,14 @@ round-trip min/avg/max/stddev = 11.987/12.166/12.345/0.179 ms
 The result can be compared with the reference implementation:
 
 ```bash
-sudo apt install inetutils-ping
+sudo apt update
+sudo apt install iputils-ping
 ping -V
 ```
+
+On Debian/Ubuntu, the `ping` command is provided by the `iputils-ping`
+package. If `apt` still cannot find it, check that the distribution
+repositories are enabled and run `sudo apt update` again.
 
 Useful test cases include IPv4 addresses, hostnames/FQDNs, unknown hosts,
 missing operands, invalid options, `-v`, and stopping with `Ctrl+C`.

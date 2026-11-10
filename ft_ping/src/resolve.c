@@ -1,10 +1,5 @@
 #include "ft_ping.h"
 
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <stdio.h>
-#include <string.h>
-
 int resolve_host(const char *target, struct sockaddr_in *address)
 {
 	struct addrinfo hints;

@@ -1,8 +1,5 @@
 #include "ft_ping.h"
 
-#include <arpa/inet.h>
-#include <stdio.h>
-
 void print_reply(const struct sockaddr_in *address, const uint8_t *packet,
 	size_t packet_size)
 {
