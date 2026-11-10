@@ -184,3 +184,5 @@ packets.
 - Raw socket access may be restricted by the operating system, container, or
   network namespace.
 - Network behavior depends on the destination and local firewall rules.
+
+https://www.geeksforgeeks.org/linux-unix/ping-command-in-linux-with-examples/
