@@ -317,7 +317,7 @@ Der UDP-Header ist insgesamt 8 Bytes groß und enthält Quellport, Zielport, Lä
 
 ## Netzwerkgrundlagen
 
-<img width="1266" height="598" alt="image" src="/workspaces/Internet_protocol_suite/Images/Full-qualified-domain-name.webp" />
+<img width="1266" height="598" alt="Aufbau eines Fully Qualified Domain Name (FQDN)" src="./Images/Full-qualified-domain-name.webp" />
 
 ### FQDN und DNS
 
