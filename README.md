@@ -314,6 +314,93 @@ ICMP besitzt keine Ports. Deshalb verwendet `ft_ping` stattdessen das Identifier
 
 Der UDP-Header ist insgesamt 8 Bytes groß und enthält Quellport, Zielport, Länge und Prüfsumme. Es gibt keine Verbindungen, Wiederholungen oder Reihenfolgesicherung. Dadurch ist UDP schnell und leichtgewichtig und eignet sich für DNS-Abfragen, Sprache, Video und Spiele. Benötigt eine Anwendung Zuverlässigkeit, muss sie diese selbst implementieren. QUIC baut beispielsweise Zuverlässigkeit auf UDP auf.
 
+
+## Netzwerkgrundlagen
+
+<img width="1266" height="598" alt="image" src="/workspaces/Internet_protocol_suite/Images/Full-qualified-domain-name.webp" />
+
+### FQDN und DNS
+
+Ein **FQDN** (Fully Qualified Domain Name) ist ein vollständiger Hostname,
+zum Beispiel `www.google.com` oder `en.wikipedia.org`. Ein FQDN besteht aus
+mehreren Teilen, die durch Punkte getrennt sind:
+
+```text
+www.google.com
+│   │      └── Top-Level-Domain (TLD)
+│   └───────── Domain
+└───────────── Hostname/Subdomain
+```
+
+`ft_traceroute` akzeptiert sowohl eine numerische IPv4-Adresse als auch einen
+Hostname oder FQDN:
+
+```sh
+sudo ./ft_traceroute 8.8.8.8
+sudo ./ft_traceroute google.com
+sudo ./ft_traceroute www.wikipedia.org
+```
+
+Bei einem Namen verwendet das Programm `getaddrinfo()`, um den Namen einmal
+vor dem Start der Messung in eine IPv4-Adresse aufzulösen. Diese sogenannte
+Forward-DNS-Auflösung ist notwendig, damit die Probe gesendet werden kann.
+
+Für die einzelnen Router wird dagegen keine Reverse-DNS-Auflösung ausgeführt.
+Die Hop-Adressen werden direkt numerisch mit `inet_ntop()` ausgegeben. Dadurch
+vermeidet das Programm zusätzliche DNS-Anfragen und die Ausgabe bleibt schnell
+und eindeutig:
+
+```text
+1  192.168.1.1  1.234 ms
+```
+
+### IPv4 und TTL
+
+IPv4-Pakete enthalten im Header das Feld **TTL** (Time To Live). TTL ist kein
+direkter Zeitwert in Sekunden, sondern ein Zähler für die maximale Anzahl von
+Router-Hops. Jeder Router verringert den TTL-Wert um mindestens eins, bevor er
+das Paket weiterleitet.
+
+`ft_traceroute` sendet für jeden Hop neue Probes mit einem steigenden TTL-Wert:
+
+```text
+TTL = 1  -> erster Router
+TTL = 2  -> zweiter Router
+TTL = 3  -> dritter Router
+```
+
+Erreicht der TTL-Wert eines Pakets null, verwirft der Router das Paket und
+sendet eine ICMP-Fehlermeldung zurück. Aus der Quelladresse dieser Meldung
+erkennt `ft_traceroute`, welcher Router auf diesem Hop liegt.
+
+Die Laufzeit einer Probe wird als **Round-Trip Time (RTT)** gemessen. Sie
+beginnt beim Senden der Probe und endet beim Empfang der passenden ICMP-Antwort.
+
+### ICMP
+
+**ICMP** (Internet Control Message Protocol) wird direkt über IPv4 übertragen
+und dient vor allem für Kontroll- und Fehlermeldungen. `ft_traceroute` nutzt
+einen Raw Socket:
+
+```c
+socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)
+```
+
+Die wichtigsten ICMP-Nachrichten für dieses Projekt sind:
+
+| Nachricht | Typ | Bedeutung |
+| --- | ---: | --- |
+| Echo Request | 8 | Die von `ft_traceroute` gesendete Probe |
+| Echo Reply | 0 | Das Ziel hat die Probe erreicht |
+| Time Exceeded | 11 | Ein Router hat die Probe wegen TTL `0` verworfen |
+| Destination Unreachable | 3 | Das Ziel oder ein Router meldet, dass die Zustellung nicht möglich ist |
+
+Eine ICMP-Fehlermeldung enthält normalerweise den ursprünglichen IPv4-Header
+und einen Teil des ursprünglichen ICMP-Pakets. Das Programm prüft darin
+Identifier und Sequenznummer, damit Antworten fremder Prozesse ignoriert
+werden.
+
+
 ### TCP: Zuverlässigkeit im Detail
 
 Der TCP-Header ist mindestens 20 Bytes groß. Die wichtigsten Felder für die Zuverlässigkeit sind:
